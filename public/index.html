@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom API Integration</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+        }
+        .joke-box {
+            background: #eef2f5;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .setup {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .punchline {
+            font-size: 1.2rem;
+            color: #e74c3c;
+            font-weight: bold;
+            display: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-punchline {
+            background-color: #2ecc71;
+        }
+        .btn-punchline:hover {
+            background-color: #27ae60;
+        }
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Joke API Integration 🎭</h1>
+    
+    <div class="joke-box">
+        <div class="loader" id="loader"></div>
+        <div class="setup" id="setup">Click "Get New Joke" to fetch a joke!</div>
+        <div class="punchline" id="punchline"></div>
+    </div>
+
+    <button id="getJokeBtn">Get New Joke</button>
+    <button id="showPunchlineBtn" class="btn-punchline" style="display: none;">Show Punchline</button>
+</div>
+
+<script>
+    const setupEl = document.getElementById('setup');
+    const punchlineEl = document.getElementById('punchline');
+    const loaderEl = document.getElementById('loader');
+    const getJokeBtn = document.getElementById('getJokeBtn');
+    const showPunchlineBtn = document.getElementById('showPunchlineBtn');
+
+    let currentPunchline = '';
+
+    async function fetchJoke() {
+        // Reset UI
+        setupEl.style.display = 'none';
+        punchlineEl.style.display = 'none';
+        showPunchlineBtn.style.display = 'none';
+        loaderEl.style.display = 'block';
+        
+        try {
+            const response = await fetch('/api/joke');
+            const data = await response.json();
+            
+            if (data.success) {
+                setupEl.innerText = data.data.setup;
+                currentPunchline = data.data.punchline;
+                
+                setupEl.style.display = 'block';
+                showPunchlineBtn.style.display = 'inline-block';
+            } else {
+                setupEl.innerText = 'Oops! Failed to fetch a joke.';
+                setupEl.style.display = 'block';
+            }
+        } catch (error) {
+            setupEl.innerText = 'Error connecting to the API.';
+            setupEl.style.display = 'block';
+        } finally {
+            loaderEl.style.display = 'none';
+        }
+    }
+
+    getJokeBtn.addEventListener('click', fetchJoke);
+
+    showPunchlineBtn.addEventListener('click', () => {
+        punchlineEl.innerText = currentPunchline;
+        punchlineEl.style.display = 'block';
+        showPunchlineBtn.style.display = 'none';
+    });
+</script>
+
+</body>
+</html>
