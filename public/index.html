@@ -3,149 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom API Integration</title>
+    <title>Weather & Country Dashboard</title>
     <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+            background-color: #f0f2f5;
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
+        header {
+            background-color: #2c3e50; color: white; width: 100%; padding: 1.5rem; text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 500px;
-            width: 100%;
         }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 1.5rem;
+        main {
+            max-width: 800px; width: 100%; padding: 2rem;
         }
-        .joke-box {
-            background: #eef2f5;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        .search-box {
+            display: flex; gap: 10px; margin-bottom: 2rem;
         }
-        .setup {
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
+        .search-box input {
+            flex: 1; padding: 12px; font-size: 1.1rem; border: 1px solid #ccc; border-radius: 6px;
         }
-        .punchline {
-            font-size: 1.2rem;
-            color: #e74c3c;
-            font-weight: bold;
-            display: none;
+        .search-box button {
+            padding: 12px 24px; font-size: 1.1rem; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; transition: 0.3s;
         }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin: 5px;
+        .search-box button:hover { background-color: #2980b9; }
+        
+        #error-message {
+            color: #e74c3c; background: #fadbd8; padding: 10px; border-radius: 6px; text-align: center; display: none; margin-bottom: 1rem;
         }
-        button:hover {
-            background-color: #2980b9;
+
+        .dashboard {
+            display: none; grid-template-columns: 1fr 1fr; gap: 20px;
         }
-        .btn-punchline {
-            background-color: #2ecc71;
+        @media (max-width: 600px) {
+            .dashboard { grid-template-columns: 1fr; }
         }
-        .btn-punchline:hover {
-            background-color: #27ae60;
+        .card {
+            background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
+        .card h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f9f9f9; }
+        .data-row:last-child { border-bottom: none; }
+        .label { font-weight: bold; color: #7f8c8d; }
+        .value { color: #2c3e50; font-weight: 500; }
+        
+        .flag-container { text-align: center; margin-bottom: 15px; }
+        .flag-container img { max-width: 120px; border: 1px solid #ddd; border-radius: 4px; }
+
         .loader {
-            display: none;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
+            display: none; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
+            width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 2rem auto;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Joke API Integration 🎭</h1>
-    
-    <div class="joke-box">
+    <header>
+        <h1>🌍 Global Weather & Country Dashboard</h1>
+        <p>A Custom API Aggregator Project</p>
+    </header>
+
+    <main>
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Enter a city name (e.g., Tokyo, Paris, New York)..." />
+            <button id="searchBtn">Search</button>
+        </div>
+
+        <div id="error-message"></div>
         <div class="loader" id="loader"></div>
-        <div class="setup" id="setup">Click "Get New Joke" to fetch a joke!</div>
-        <div class="punchline" id="punchline"></div>
-    </div>
 
-    <button id="getJokeBtn">Get New Joke</button>
-    <button id="showPunchlineBtn" class="btn-punchline" style="display: none;">Show Punchline</button>
-</div>
+        <div class="dashboard" id="dashboard">
+            <div class="card">
+                <h2>🌤️ Weather</h2>
+                <div class="data-row"><span class="label">City</span><span class="value" id="val-city"></span></div>
+                <div class="data-row"><span class="label">Temperature</span><span class="value" id="val-temp"></span></div>
+                <div class="data-row"><span class="label">Wind Speed</span><span class="value" id="val-wind"></span></div>
+                <div class="data-row"><span class="label">Coordinates</span><span class="value" id="val-coords"></span></div>
+                <div class="data-row"><span class="label">Local Time</span><span class="value" id="val-time"></span></div>
+            </div>
 
-<script>
-    const setupEl = document.getElementById('setup');
-    const punchlineEl = document.getElementById('punchline');
-    const loaderEl = document.getElementById('loader');
-    const getJokeBtn = document.getElementById('getJokeBtn');
-    const showPunchlineBtn = document.getElementById('showPunchlineBtn');
+            <div class="card">
+                <h2>📍 Country Info</h2>
+                <div class="flag-container">
+                    <img id="val-flag" src="" alt="Country Flag" style="display: none;" />
+                </div>
+                <div class="data-row"><span class="label">Country</span><span class="value" id="val-country"></span></div>
+                <div class="data-row"><span class="label">Region</span><span class="value" id="val-region"></span></div>
+                <div class="data-row"><span class="label">Population</span><span class="value" id="val-population"></span></div>
+            </div>
+        </div>
+    </main>
 
-    let currentPunchline = '';
+    <script>
+        const searchBtn = document.getElementById('searchBtn');
+        const cityInput = document.getElementById('cityInput');
+        const dashboard = document.getElementById('dashboard');
+        const loader = document.getElementById('loader');
+        const errorMsg = document.getElementById('error-message');
 
-    async function fetchJoke() {
-        // Reset UI
-        setupEl.style.display = 'none';
-        punchlineEl.style.display = 'none';
-        showPunchlineBtn.style.display = 'none';
-        loaderEl.style.display = 'block';
-        
-        try {
-            const response = await fetch('/api/joke');
-            const data = await response.json();
-            
-            if (data.success) {
-                setupEl.innerText = data.data.setup;
-                currentPunchline = data.data.punchline;
-                
-                setupEl.style.display = 'block';
-                showPunchlineBtn.style.display = 'inline-block';
-            } else {
-                setupEl.innerText = 'Oops! Failed to fetch a joke.';
-                setupEl.style.display = 'block';
+        async function fetchDashboardData() {
+            const city = cityInput.value.trim();
+            if (!city) return;
+
+            // Reset UI
+            errorMsg.style.display = 'none';
+            dashboard.style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/location-info?city=${encodeURIComponent(city)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const data = result.data;
+                    
+                    // Populate Weather Data
+                    document.getElementById('val-city').innerText = data.city;
+                    document.getElementById('val-temp').innerText = `${data.weather.temperature} °C`;
+                    document.getElementById('val-wind').innerText = `${data.weather.windspeed} km/h`;
+                    document.getElementById('val-coords').innerText = `${data.coordinates.latitude.toFixed(2)}, ${data.coordinates.longitude.toFixed(2)}`;
+                    document.getElementById('val-time').innerText = data.weather.time.replace('T', ' ');
+
+                    // Populate Country Data
+                    document.getElementById('val-country').innerText = data.country;
+                    if (data.countryInfo) {
+                        document.getElementById('val-region').innerText = data.countryInfo.region;
+                        document.getElementById('val-population').innerText = data.countryInfo.population.toLocaleString();
+                        const flagImg = document.getElementById('val-flag');
+                        flagImg.src = data.countryInfo.flag;
+                        flagImg.style.display = 'inline-block';
+                    } else {
+                        document.getElementById('val-region').innerText = 'N/A';
+                        document.getElementById('val-population').innerText = 'N/A';
+                        document.getElementById('val-flag').style.display = 'none';
+                    }
+
+                    // Show Dashboard
+                    dashboard.style.display = 'grid';
+                } else {
+                    errorMsg.innerText = result.message || 'Error fetching data.';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (error) {
+                errorMsg.innerText = 'Failed to connect to the server.';
+                errorMsg.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
             }
-        } catch (error) {
-            setupEl.innerText = 'Error connecting to the API.';
-            setupEl.style.display = 'block';
-        } finally {
-            loaderEl.style.display = 'none';
         }
-    }
 
-    getJokeBtn.addEventListener('click', fetchJoke);
-
-    showPunchlineBtn.addEventListener('click', () => {
-        punchlineEl.innerText = currentPunchline;
-        punchlineEl.style.display = 'block';
-        showPunchlineBtn.style.display = 'none';
-    });
-</script>
-
+        searchBtn.addEventListener('click', fetchDashboardData);
+        cityInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchDashboardData();
+        });
+    </script>
 </body>
 </html>

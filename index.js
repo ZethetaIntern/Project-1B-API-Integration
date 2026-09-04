@@ -1,49 +1,84 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-
-// Serve static files from the public directory
-const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
-// A simple endpoint that integrates with a public 3rd party API
-app.get('/api/joke', async (req, res) => {
-    try {
-        // We are integrating with the Official Joke API
-        const response = await axios.get('https://official-joke-api.appspot.com/random_joke');
-        
-        // Custom formatting or logic can be applied here
-        const jokeData = {
-            success: true,
-            source: 'Official Joke API',
-            data: {
-                setup: response.data.setup,
-                punchline: response.data.punchline
-            }
-        };
+app.get('/api/location-info', async (req, res) => {
+    const city = req.query.city;
+    if (!city) {
+        return res.status(400).json({ success: false, message: 'City parameter is required' });
+    }
 
-        res.json(jokeData);
+    try {
+        // 1. Fetch Location Coordinates (Open-Meteo Geocoding API)
+        const geoResponse = await axios.get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+        
+        if (!geoResponse.data.results || geoResponse.data.results.length === 0) {
+            return res.status(404).json({ success: false, message: 'City not found' });
+        }
+        
+        const location = geoResponse.data.results[0];
+        const { latitude, longitude, country, country_code } = location;
+
+        // 2. Fetch Current Weather (Open-Meteo Weather API)
+        const weatherResponse = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+        const weather = weatherResponse.data.current_weather;
+
+        // 3. Fetch Country Details (REST Countries API)
+        let countryInfo = null;
+        try {
+            const countryResponse = await axios.get(`https://restcountries.com/v3.1/alpha/${country_code}`);
+            if (countryResponse.data && countryResponse.data.length > 0) {
+                const c = countryResponse.data[0];
+                countryInfo = {
+                    name: c.name.common,
+                    region: c.region,
+                    population: c.population,
+                    flag: c.flags.svg
+                };
+            }
+        } catch (err) {
+            console.error('Error fetching country data:', err.message);
+            // We proceed even if country API fails
+        }
+
+        // 4. Aggregate and Send Data
+        res.json({
+            success: true,
+            data: {
+                city: location.name,
+                country: country,
+                coordinates: { latitude, longitude },
+                weather: {
+                    temperature: weather.temperature,
+                    windspeed: weather.windspeed,
+                    time: weather.time
+                },
+                countryInfo
+            }
+        });
+
     } catch (error) {
-        console.error('Error fetching data:', error.message);
+        console.error('Error aggregating API data:', error.message);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch data from the external API'
+            message: 'Internal server error while fetching data'
         });
     }
 });
 
-// A health check endpoint
+// Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'UP', message: 'API Integration Server is running!' });
 });
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
-    console.log(`Test the custom API integration at http://localhost:${PORT}/api/joke`);
 });
